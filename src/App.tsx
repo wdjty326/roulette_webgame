@@ -16,6 +16,9 @@ function App() {
       type: Phaser.AUTO,
       width: window.innerWidth,
       height: window.innerHeight,
+      physics: {
+        default: 'arcade'
+      },
       scene: [GameScreen]
     })
     gameRef.current = game;
