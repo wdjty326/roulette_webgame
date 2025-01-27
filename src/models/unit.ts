@@ -1,7 +1,7 @@
 export class BallUnit {
   private ball: Phaser.GameObjects.Arc;
+  private object: Phaser.GameObjects.GameObject;
   private scene: Phaser.Scene;
-  private radius: number;
   private speed: number;
   
   private static getRandomColor(): number {
@@ -12,32 +12,28 @@ export class BallUnit {
     );
   }
   
-  constructor(scene: Phaser.Scene, x: number, y: number, radius: number = 20, color?: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, radius: number = 20) {
     this.scene = scene;
-    this.radius = radius;
     this.speed = 5;
-    
-    // 공 생성 (color가 없으면 랜덤 색상 사용)
-    this.ball = scene.add.circle(x, y, radius, color ?? BallUnit.getRandomColor(), 1);
-    
-    // 물리 속성 추가
-    scene.physics.add.existing(this.ball);
-    const body = this.ball.body as Phaser.Physics.Arcade.Body;
-    body.setCircle(radius);
-    body.setBounce(1);           // 완전 탄성 충돌 (1.0)
-    body.setCollideWorldBounds(true);
-    body.setDrag(10);           // 마찰 감소
-    body.setMass(1);            // 질량 설정
-    body.setMaxVelocity(300);   // 최대 속도 제한
-    body.setGravityY(300);
+    this.ball = scene.add.circle(x, y, radius, BallUnit.getRandomColor());
+    this.object = scene.matter.add.gameObject(this.ball, {
+      restitution: 1,
+      friction: 0,
+      density: 0.001,
+      render: {
+        sprite: {
+          tint: BallUnit.getRandomColor()
+        }
+      }
+    });
+    console.log(this.ball);
   }
 
   move(direction: { x: number; y: number }) {
-    const body = this.ball.body as Phaser.Physics.Arcade.Body;
-    body.setVelocity(
-      direction.x * this.speed * 100,
-      direction.y * this.speed * 100
-    );
+    this.scene.matter.body.setVelocity(this.object.body as MatterJS.BodyType, {
+        x: direction.x * this.speed * 100,
+        y: direction.y * this.speed * 100
+    });
   }
 
   setPosition(x: number, y: number) {
@@ -55,7 +51,12 @@ export class BallUnit {
     return this.ball;
   }
 
+  getObject() {
+    return this.object;
+  }
+
   destroy() {
+    this.scene.matter.world.remove(this.object);
     this.ball.destroy();
   }
 }

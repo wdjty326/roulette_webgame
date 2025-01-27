@@ -1,111 +1,71 @@
 import Phaser from "phaser";
-import { BallUnit } from '../models/unit';
-
+import { BallUnit } from "../models/unit";
 export default class GameScreen extends Phaser.Scene {
-    private players!: BallUnit[];
-    private obstacles!: Phaser.GameObjects.Rectangle[];
+    private players: BallUnit[] = [];
+    private obstacles: { visual: Phaser.GameObjects.Rectangle, body: MatterJS.BodyType }[] = [];
+    private rotationSpeed = 0.02; // 회전 속도
 
     constructor() {
-        super({
-            key: 'roulette',
-        })
+        super({ key: 'roulette' });
     }
 
     create() {
-        // 물리 시스템 설정
-        this.physics.world.setBounds(0, 0, window.innerWidth, window.innerHeight);
-        
+        // 물리 세계 설정
+        this.matter.world.setBounds(0, 0, window.innerWidth, window.innerHeight);
+        this.matter.world.setGravity(0, 1);
+
         // 회전하는 장애물 생성
-        this.obstacles = [];
         const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight - 200;
+        const centerY = window.innerHeight - 100;
 
         // 십자가 형태의 회전하는 장애물
         const obstacleWidth = 400;
         const obstacleHeight = 20;
-        
-        const obstacle1 = this.add.rectangle(centerX, centerY, obstacleWidth, obstacleHeight, 0x4a4a4a);
-        const obstacle2 = this.add.rectangle(centerX, centerY, obstacleHeight, obstacleWidth, 0x4a4a4a);
-        
-        [obstacle1, obstacle2].forEach(obstacle => {
-            this.physics.add.existing(obstacle, false);
-            const body = obstacle.body as Phaser.Physics.Arcade.Body;
-            body.setImmovable(true);
-            body.setAllowRotation(true);
-            body.setAngularVelocity(90); // 초당 90도 회전
-            body.setBounce(1, 1);
-            this.obstacles.push(obstacle);
+
+        // 장애물 생성
+        const obstacle1Visual = this.add.rectangle(centerX, centerY, obstacleWidth, obstacleHeight, 0x4a4a4a);
+        const obstacle1Body = this.matter.add.rectangle(centerX, centerY, obstacleWidth, obstacleHeight, {
+            isStatic: true,
+            angle: 0,
+            friction: 0.2,
+            restitution: 0.8
         });
 
-        // tweens 대신 update에서 처리하도록 수정
-        this.obstacles.forEach(obstacle => {
-            obstacle.setData('rotationSpeed', 1); // 회전 속도 저장
+        const obstacle2Visual = this.add.rectangle(centerX, centerY, obstacleHeight, obstacleWidth, 0x4a4a4a);
+        const obstacle2Body = this.matter.add.rectangle(centerX, centerY, obstacleHeight, obstacleWidth, {
+            isStatic: true,
+            angle: 0,
+            friction: 0.2,
+            restitution: 0.8
         });
-        
-        // 플레이어 볼 생성
-        this.players = [];
+
+        this.obstacles = [
+            { visual: obstacle1Visual, body: obstacle1Body },
+            { visual: obstacle2Visual, body: obstacle2Body }
+        ];
+
+        // 공들 생성
         const margin = 100;
-        
         for (let i = 0; i < 20; i++) {
             const x = Phaser.Math.Between(margin, window.innerWidth - margin);
             const y = Phaser.Math.Between(margin, window.innerHeight - margin);
-            
-            this.players.push(new BallUnit(
-                this,
-                x,
-                y,
-                15
-            ));
+
+            const ball = new BallUnit(this, x, y, 15);
+            this.players.push(ball);
         }
 
-        // 장애물 설정
-        this.obstacles.forEach(obstacle => {
-            const body = obstacle.body as Phaser.Physics.Arcade.Body;
-            body.setImmovable(true);
-            body.setAllowRotation(true);
-            body.setAngularVelocity(90);
-            
-            // 장애물과 공 충돌
-            this.players.forEach(player => {
-                this.physics.add.collider(player.getBall(), obstacle, (ball, obstacle) => {
-                    const playerBall = ball as Phaser.GameObjects.Arc;
-                    const playerBody = playerBall.body as Phaser.Physics.Arcade.Body;
-                    const obstacleObj = obstacle as Phaser.GameObjects.Rectangle;
-                    
-                    // 장애물의 회전 각도 (라디안)
-                    const rotationRad = obstacleObj.rotation;
-                    
-                    // 회전 방향으로의 속도 벡터 계산
-                    const speed = 400; // 튕기는 속도
-                    const velocityX = Math.cos(rotationRad) * speed;
-                    const velocityY = Math.sin(rotationRad) * speed;
-                    
-                    // 공의 속도 설정
-                    playerBody.setVelocity(velocityX, velocityY);
-                });
-            });
-        });
-
-        // 플레이어 공들 간의 충돌 설정
-        for (let i = 0; i < this.players.length; i++) {
-            const ball1 = this.players[i].getBall();
-            const ballBody = ball1.body as Phaser.Physics.Arcade.Body;
-            ballBody.setBounce(1);
-            
-            for (let j = i + 1; j < this.players.length; j++) {
-                const ball2 = this.players[j].getBall();
-                this.physics.add.collider(ball1, ball2);
-            }
-        }
-
-        this.physics.world.setBoundsCollision(true, true, true, true);
+        // 장애물 회전 설정
+        // this.obstacles.forEach(obstacle => {
+        //     this.matter.body.rotate(obstacle.body, this.rotationSpeed);
+        // });
     }
 
     update() {
-        // 장애물 회전만 처리
+        // 장애물 회전 유지
         this.obstacles.forEach(obstacle => {
-            const body = obstacle.body as Phaser.Physics.Arcade.Body;
-            body.setAngularVelocity(90);
+            this.matter.body.rotate(obstacle.body, this.rotationSpeed);
+            // 시각적 요소 회전
+            obstacle.visual.rotation += this.rotationSpeed;
         });
     }
 }
