@@ -26,7 +26,6 @@ export class BallUnit {
         }
       }
     });
-    console.log(this.ball);
   }
 
   move(direction: { x: number; y: number }) {
