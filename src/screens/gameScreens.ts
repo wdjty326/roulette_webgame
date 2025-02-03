@@ -147,8 +147,45 @@ export default class GameScreen extends Phaser.Scene {
         border.setScrollFactor(0);
         border.setDepth(100);
 
-        // 메인 카메라에서만 테두리가 보이도록 설정
-        this.minimap.ignore(border);
+        // 미니맵 상호작용을 위한 투명한 버튼 영역 생성
+        const minimapInteractive = this.add.rectangle(
+            window.innerWidth - minimapWidth - minimapMargin,
+            window.innerHeight - minimapHeight - minimapMargin,
+            minimapWidth,
+            minimapHeight,
+            0x000000,
+            0
+        );
+        minimapInteractive.setOrigin(0, 0);
+        minimapInteractive.setScrollFactor(0);
+        minimapInteractive.setInteractive();
+        minimapInteractive.setDepth(99);
+
+        // 미니맵 호버/클릭 이벤트
+        minimapInteractive.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            const relativeY = pointer.y - (window.innerHeight - minimapHeight - minimapMargin);
+            const targetY = (relativeY / minimapHeight) * height;
+            
+            // 메인 카메라 위치 업데이트
+            this.cameras.main.scrollY = targetY - (window.innerHeight / 2);
+        });
+
+        // 미니맵에서만 보이는 현재 뷰포트 영역 표시
+        const viewportRect = this.add.rectangle(0, 0, minimapWidth, (minimapHeight / height) * window.innerHeight, 0xffffff, 0.2);
+        viewportRect.setOrigin(0, 0);
+        viewportRect.setScrollFactor(0);
+        viewportRect.setDepth(98);
+
+        // 뷰포트 영역 업데이트
+        this.events.on('update', () => {
+            const minimapX = window.innerWidth - minimapWidth - minimapMargin;
+            const minimapY = window.innerHeight - minimapHeight - minimapMargin;
+            const relativeY = (this.cameras.main.scrollY / height) * minimapHeight;
+            viewportRect.setPosition(minimapX, minimapY + relativeY);
+        });
+
+        // 메인 카메라에서는 뷰포트 영역을 보이지 않게
+        this.minimap.ignore(viewportRect);
     }
 
     update() {
@@ -166,10 +203,10 @@ export default class GameScreen extends Phaser.Scene {
         });
 
         // 가장 아래에 있는 공을 카메라가 따라가도록 설정
-        if (lowestBall) {
-            this.cameras.main.setLerp(0.1, 0.1);
-            this.cameras.main.startFollow(lowestBall);
-        }
+        // if (lowestBall) {
+        //     this.cameras.main.setLerp(0.1, 0.1);
+        //     this.cameras.main.startFollow(lowestBall);
+        // }
 
         // 공이 맵 끝에 도달하면 위로 리셋
         this.players.forEach(player => {
