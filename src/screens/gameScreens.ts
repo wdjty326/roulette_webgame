@@ -11,9 +11,77 @@ export default class GameScreen extends Phaser.Scene {
     }
 
     create() {
+        const width = 2880;
+        const height = 9000;
         // 물리 세계 설정
-        this.matter.world.setBounds(0, 0, window.innerWidth, 8000);
+        this.matter.world.setBounds(0, 0, width, height);
         this.matter.world.setGravity(0, 1);
+
+        // 벽 설정
+        const wallThickness = 60;
+        const wallSegmentHeight = 1000;  // 각 벽 조각의 높이
+        const wallAngle = 1;          // 기울기 각도 (라디안)
+        const segments = Math.ceil(height / wallSegmentHeight);  // 필요한 벽 조각 수
+
+        // 왼쪽 지그재그 벽 생성
+        for (let i = 0; i < segments; i++) {
+            const y = i * wallSegmentHeight + wallSegmentHeight / 2;
+            const angle = (i % 2 === 0) ? wallAngle : -wallAngle;  // 번갈아가며 각도 변경
+            
+            // 시각적 벽
+            this.add.rectangle(
+                width/2 - 720,
+                y,
+                wallThickness,
+                wallSegmentHeight,
+                0x4a4a4a
+            ).setRotation(angle);
+
+            // 물리 벽
+            this.matter.add.rectangle(
+                width/2 - 720,
+                y,
+                wallThickness,
+                wallSegmentHeight,
+                {
+                    isStatic: true,
+                    angle: angle,
+                    render: {
+                        fillColor: 0xFFFFFFFF
+                    }
+                }
+            );
+        }
+
+        // 오른쪽 지그재그 벽 생성
+        for (let i = 0; i < segments; i++) {
+            const y = i * wallSegmentHeight + wallSegmentHeight / 2;
+            const angle = (i % 2 === 0) ? wallAngle : -wallAngle;  // 왼쪽과 반대로
+            
+            // 시각적 벽
+            this.add.rectangle(
+                width/2 + 720,
+                y,
+                wallThickness,
+                wallSegmentHeight,
+                0x4a4a4a
+            ).setRotation(angle);
+
+            // 물리 벽
+            this.matter.add.rectangle(
+                width/2 + 720,
+                y,
+                wallThickness,
+                wallSegmentHeight,
+                {
+                    isStatic: true,
+                    angle: angle,
+                    render: {
+                        fillColor: 0xFFFFFFFF
+                    }
+                }
+            );
+        }
 
         // 회전하는 장애물 생성
         const obstacleWidth = 400;
@@ -25,21 +93,21 @@ export default class GameScreen extends Phaser.Scene {
 
         this.obstacles = [];
         
-        for (let i = 0; i < 30; i++) {
-            const x = Phaser.Math.Between(margin, window.innerWidth - margin);
-            const y = verticalGap * (i + 1); // 수직 간격을 두고 배치
+        // for (let i = 0; i < 30; i++) {
+        //     const x = Phaser.Math.Between(margin, window.innerWidth - margin);
+        //     const y = verticalGap * (i + 1); // 수직 간격을 두고 배치
             
-            this.obstacles.push(
-                new Obstacle(this, x, y, obstacleWidth, obstacleHeight)
-            );
-        }
+        //     this.obstacles.push(
+        //         new Obstacle(this, x, y, obstacleWidth, obstacleHeight)
+        //     );
+        // }
 
         // 첫 번째 공을 카메라가 따라가도록 설정
         // this.cameras.main.setBounds(0, 0, window.innerWidth, 8000);
 
         // 공들 생성
         const ballMargin = 100;
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 1; i++) {
             const x = Phaser.Math.Between(ballMargin, window.innerWidth - ballMargin);
             const y = Phaser.Math.Between(ballMargin, window.innerHeight - ballMargin);
             
