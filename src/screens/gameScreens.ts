@@ -17,6 +17,8 @@ export default class GameScreen extends Phaser.Scene {
         this.matter.world.setBounds(0, 0, width, height);
         this.matter.world.setGravity(0, 1);
 
+        this.cameras.main.setBounds(0, 0, width, height);
+
         // 벽 설정
         const wallThickness = 60;
         const wallSegmentHeight = 1000;  // 각 벽 조각의 높이
@@ -163,15 +165,25 @@ export default class GameScreen extends Phaser.Scene {
 
         // 미니맵 호버/클릭 이벤트
         minimapInteractive.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            const relativeX = pointer.x - (window.innerWidth - minimapWidth - minimapMargin);
             const relativeY = pointer.y - (window.innerHeight - minimapHeight - minimapMargin);
+            const targetX = (relativeX / minimapWidth) * width;
             const targetY = (relativeY / minimapHeight) * height;
             
             // 메인 카메라 위치 업데이트
+            this.cameras.main.scrollX = targetX - (window.innerWidth / 2);
             this.cameras.main.scrollY = targetY - (window.innerHeight / 2);
         });
 
         // 미니맵에서만 보이는 현재 뷰포트 영역 표시
-        const viewportRect = this.add.rectangle(0, 0, minimapWidth, (minimapHeight / height) * window.innerHeight, 0xffffff, 0.2);
+        const viewportRect = this.add.rectangle(
+            window.innerWidth - minimapWidth - minimapMargin,
+            window.innerHeight - minimapHeight - minimapMargin,
+            minimapWidth * (window.innerWidth / width),  // 미니맵 비율에 맞게 조정
+            minimapHeight * (window.innerHeight / height), // 미니맵 비율에 맞게 조정
+            0xffffff,
+            0.2
+        );
         viewportRect.setOrigin(0, 0);
         viewportRect.setScrollFactor(0);
         viewportRect.setDepth(98);
@@ -180,8 +192,9 @@ export default class GameScreen extends Phaser.Scene {
         this.events.on('update', () => {
             const minimapX = window.innerWidth - minimapWidth - minimapMargin;
             const minimapY = window.innerHeight - minimapHeight - minimapMargin;
+            const relativeX = (this.cameras.main.scrollX / width) * minimapWidth;   
             const relativeY = (this.cameras.main.scrollY / height) * minimapHeight;
-            viewportRect.setPosition(minimapX, minimapY + relativeY);
+            viewportRect.setPosition(minimapX + relativeX, minimapY + relativeY);
         });
 
         // 메인 카메라에서는 뷰포트 영역을 보이지 않게
