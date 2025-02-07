@@ -1,16 +1,8 @@
 import { useEffect, useRef } from 'react'
 // import GameScreen from './screens/gameScreens.ts'
 import Matter from 'matter-js';
+import ZIGZAG_VALLEY_CONFIG from './maps/ZizzagValley';
 
-const getLinePosition = (x: number, y: number, width: number, height: number, angle: number) => {
-  return {
-    x: x - (height / 2) * Math.sin(angle),
-    y: y + (height / 2) * Math.cos(angle) + (height / 2),
-    width,
-    height,
-    angle
-  }
-};
 
 function App() {
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -57,79 +49,38 @@ function App() {
     // run te renderer
     Render.run(render);
     // create two boxes and a ground
-    const boxA = Bodies.rectangle(1000, 200, 80, 80);
-    const boxB = Bodies.rectangle(1250, 50, 80, 80);
-    // 수직 벽의 높이와 위치 계산
-    const wallHeight = height / 5;
-    const wallY = height / 5 - 60;
-    const leftX = width / 2 - 1024;
-    const rightX = width / 2 + 1024;
+    const boxA = Bodies.circle(1000, 200, 40, {
+      restitution: 0.8,  // 탄성 (0~1)
+      friction: 0.01,    // 마찰 (낮을수록 잘 미끄러짐)
+      density: 0.001,    // 밀도 (가벼울수록 잘 튕김)
+      render: {
+        fillStyle: '#F35e66'
+      }
+    });
 
-    // 수직 벽
-    const ground = Bodies.rectangle(leftX, wallY, 64, wallHeight, { isStatic: true, render: {
-      fillStyle: '#FFFFFF'
-    } });
-    const ground2 = Bodies.rectangle(rightX, wallY, 64, wallHeight, { isStatic: true, render: {
-      fillStyle: '#FFFFFF'
-    } });
+    const boxB = Bodies.circle(1250, 50, 40, {
+      restitution: 0.8,
+      friction: 0.01,
+      density: 0.001,
+      render: {
+        fillStyle: '#63C132'
+      }
+    });
 
-    const line1 = getLinePosition(leftX, wallY, 64, wallHeight, Math.PI / 4);
-    const line2 = getLinePosition(rightX, wallY, 64, wallHeight, Math.PI / 4);
-    
-    // 45도 기울어진 벽 - 수직 벽의 정확한 끝점에서 시작
-    const ground3 = Bodies.rectangle(
-      line1.x,
-      line1.y,
-      line1.width,
-      line1.height,
-      { isStatic: true, angle: line1.angle, render: {
-        fillStyle: '#FFFFFF'
-      } }
-    );
-
-    const ground4 = Bodies.rectangle(
-        line2.x,
-        line2.y,
-        line2.width,
-        line2.height,
-        { isStatic: true, angle: line2.angle, render: {
-          fillStyle: '#FFFFFF'
-        } }
-    );
-
-    const line3 = getLinePosition(line1.x, line1.y, 64, wallHeight, line1.angle);
-    const line4 = getLinePosition(line2.x, line2.y, 64, wallHeight, line2.angle);
-
-    // 수직 벽
-    const ground5 = Bodies.rectangle(line3.x, line3.y, 64, wallHeight, { isStatic: true, render: {
-        fillStyle: '#FFFFFF'
-    } });
-    const ground6 = Bodies.rectangle(line4.x, line4.y, 64, wallHeight, { isStatic: true, render: {
-      fillStyle: '#FFFFFF'
-    } });
-    
-    const line5 = getLinePosition(line3.x, line3.y, 64, wallHeight, -Math.PI / 4);
-    const line6 = getLinePosition(line4.x, line4.y, 64, wallHeight, -Math.PI / 4);
-
-    // 수직 벽
-    const ground7 = Bodies.rectangle(line5.x, line5.y, 64, wallHeight, { isStatic: true, angle: line5.angle, render: {
-      fillStyle: '#FFFFFF'
-    } });
-    const ground8 = Bodies.rectangle(line6.x, line6.y, 64, wallHeight, { isStatic: true, angle: line6.angle, render: {
-      fillStyle: '#FFFFFF'
-    } });
-    
-    const line7 = getLinePosition(line5.x, line5.y, 64, wallHeight, line5.angle);
-    const line8 = getLinePosition(line6.x, line6.y, 64, wallHeight, line6.angle);
-
-    // 수직 벽
-    const ground9 = Bodies.rectangle(line7.x, line7.y, 64, wallHeight, { isStatic: true, render: {
-      fillStyle: '#FFFFFF'
-    } });
-    const ground10 = Bodies.rectangle(line8.x, line8.y, 64, wallHeight, { isStatic: true, render: {
-      fillStyle: '#FFFFFF'
-    } });
-    
+    const walls = ZIGZAG_VALLEY_CONFIG.walls.map(wall => {
+      const ground = Bodies.rectangle(wall.x, wall.y, wall.width, wall.height, { 
+        isStatic: true, 
+        angle: wall.angle,
+        restitution: 0.8,  // 벽도 탄성 추가
+        chamfer: { radius: 20 },
+        friction: 0.01,
+        render: {
+          fillStyle: '#FFFFFF',
+        } 
+      });
+      Matter.Body.setCentre(ground, { x: 0, y: 0 }, true);
+      return ground;
+    });
 
     const floor = Bodies.rectangle(
         width/2,      // x: 사각형의 중심점 x좌표
@@ -165,7 +116,7 @@ function App() {
 
     // world(mouseConstraint);
     // add all of the bodies to the world
-    Composite.add(world, [boxA, boxB, ground, ground2, ground3, ground4, ground5, ground6, ground7, ground8, ground9, ground10, floor, mouseConstraint]);
+    Composite.add(world, [boxA, boxB, ...walls, floor, mouseConstraint]);
 
     // create runner
     const runner = Runner.create();
@@ -177,8 +128,10 @@ function App() {
     Matter.Events.on(engine, 'afterUpdate', () => {
       if (!boxB.position) return;
       Render.lookAt(render, boxB, {
-        x: width / 2,
-        y: height / 2
+        // x: width / 2,
+        // y: height / 2
+        x: window.innerWidth,
+        y: window.innerHeight
       });
     });
 
