@@ -67,6 +67,26 @@ function App() {
       }
     });
 
+
+    // 이걸로 내일 만들거임....
+    const wall = Bodies.fromVertices(1250, 200, [
+      [
+        { x: 0, y: 0 },
+        { x: 200, y: 0 },
+        { x: 200, y: 200 },
+        { x: 0, y: 200 }
+      ]
+    ], {
+      isStatic: true,
+      angle: Math.PI / 4,
+      // restitution: 0.8,
+      // friction: 0.01,
+      // density: 0.001,
+      render: {
+        fillStyle: '#FFFFFF'
+      }
+    });
+    Composite.add(world, [wall]);
     const walls = ZIGZAG_VALLEY_CONFIG.walls.map(wall => {
       const ground = Bodies.rectangle(wall.x, wall.y, wall.width, wall.height, { 
         isStatic: true, 
@@ -128,10 +148,10 @@ function App() {
     Matter.Events.on(engine, 'afterUpdate', () => {
       if (!boxB.position) return;
       Render.lookAt(render, boxB, {
-        // x: width / 2,
-        // y: height / 2
-        x: window.innerWidth,
-        y: window.innerHeight
+        x: width / 2,
+        y: height / 2
+        // x: window.innerWidth,
+        // y: window.innerHeight
       });
     });
 

@@ -1,15 +1,19 @@
-/**
- * // TODO::
- * 벽 위치 계산
- */
-export const getWellPosition = (x: number, y: number, width: number, height: number, angle: number) => {
-    const rx = (height / 2) * Math.sin(angle);
-    const ry = (height / 2) * Math.cos(angle);
+export const getWallPosition = (
+    startX: number,    // 시작점 X
+    startY: number,    // 시작점 Y
+    width: number,     // 벽 두께
+    height: number,    // 벽 높이
+    angle: number      // 각도
+) => {
+    // 시작점에서 중심점으로의 오프셋 계산
+    const dx = (height/2) * Math.sin(angle) - (width/2) * Math.cos(angle);
+    const dy = -(height/2) * Math.cos(angle) - (width/2) * Math.sin(angle);
+
     return {
-        x: x - rx,
-        y: y + ry + (height / 2),
+        x: startX - dx,  // 중심점 X
+        y: startY - dy,  // 중심점 Y
         width,
         height,
         angle
-    }
+    };
 };
