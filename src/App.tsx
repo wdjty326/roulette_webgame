@@ -2,6 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 // import GameScreen from './screens/gameScreens.ts'
 import Matter from 'matter-js';
 
+const getLinePosition = (x: number, y: number, width: number, height: number, angle: number) => {
+  return {
+    x: x - (height / 2) * Math.sin(angle),
+    y: y + (height / 2) * Math.cos(angle) + (height / 2),
+    width,
+    height,
+    angle
+  }
+};
+
 function App() {
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
@@ -29,7 +39,7 @@ function App() {
     engineRef.current = engine;
 
     const width = 2880;
-    const height = 9000;
+    const height = 12800;
 
     const world = engine.world;
     // create a renderer
@@ -50,40 +60,75 @@ function App() {
     const boxA = Bodies.rectangle(1000, 200, 80, 80);
     const boxB = Bodies.rectangle(1250, 50, 80, 80);
     // 수직 벽의 높이와 위치 계산
-    const wallHeight = height / 4;
-    const wallY = height / 4 - 60;
-    const leftX = width / 2 - 800;
-    const rightX = width / 2 + 800;
+    const wallHeight = height / 5;
+    const wallY = height / 5 - 60;
+    const leftX = width / 2 - 1024;
+    const rightX = width / 2 + 1024;
 
     // 수직 벽
-    const ground = Bodies.rectangle(leftX, wallY, 64, wallHeight, { isStatic: true });
-    const ground2 = Bodies.rectangle(rightX, wallY, 64, wallHeight, { isStatic: true });
+    const ground = Bodies.rectangle(leftX, wallY, 64, wallHeight, { isStatic: true, render: {
+      fillStyle: '#FFFFFF'
+    } });
+    const ground2 = Bodies.rectangle(rightX, wallY, 64, wallHeight, { isStatic: true, render: {
+      fillStyle: '#FFFFFF'
+    } });
+
+    const line1 = getLinePosition(leftX, wallY, 64, wallHeight, Math.PI / 4);
+    const line2 = getLinePosition(rightX, wallY, 64, wallHeight, Math.PI / 4);
     
     // 45도 기울어진 벽 - 수직 벽의 정확한 끝점에서 시작
     const ground3 = Bodies.rectangle(
-      leftX - (wallHeight/2) * Math.sin(Math.PI/4),  // x: 왼쪽 벽 끝점에서 시작
-      wallY + (wallHeight / 2) + (wallHeight/2) * Math.cos(Math.PI/4),  // y: 왼쪽 벽 끝점에서 시작
-        64,
-        wallHeight,
-        { isStatic: true, angle: Math.PI / 4 }
+      line1.x,
+      line1.y,
+      line1.width,
+      line1.height,
+      { isStatic: true, angle: line1.angle, render: {
+        fillStyle: '#FFFFFF'
+      } }
     );
-    
+
     const ground4 = Bodies.rectangle(
-        rightX - (wallHeight/2) * Math.sin(Math.PI/4),                    // 오른쪽 벽과 같은 x 위치
-        wallY + (wallHeight/2) + (wallHeight/2) * Math.cos(Math.PI/4),       // 오른쪽 벽의 정확한 끝점 y 위치
-        64,
-        wallHeight,
-        { isStatic: true, angle: Math.PI / 4 }
+        line2.x,
+        line2.y,
+        line2.width,
+        line2.height,
+        { isStatic: true, angle: line2.angle, render: {
+          fillStyle: '#FFFFFF'
+        } }
     );
 
+    const line3 = getLinePosition(line1.x, line1.y, 64, wallHeight, line1.angle);
+    const line4 = getLinePosition(line2.x, line2.y, 64, wallHeight, line2.angle);
 
     // 수직 벽
-    const ground5 = Bodies.rectangle(leftX - (wallHeight) * Math.sin(Math.PI/4), wallY + (wallHeight) + (wallHeight) * Math.cos(Math.PI/4), 64, wallHeight, { isStatic: true });
-    const ground6 = Bodies.rectangle(rightX - (wallHeight) * Math.sin(Math.PI/4),  wallY + (wallHeight) + (wallHeight) * Math.cos(Math.PI/4), 64, wallHeight, { isStatic: true });
+    const ground5 = Bodies.rectangle(line3.x, line3.y, 64, wallHeight, { isStatic: true, render: {
+        fillStyle: '#FFFFFF'
+    } });
+    const ground6 = Bodies.rectangle(line4.x, line4.y, 64, wallHeight, { isStatic: true, render: {
+      fillStyle: '#FFFFFF'
+    } });
     
+    const line5 = getLinePosition(line3.x, line3.y, 64, wallHeight, -Math.PI / 4);
+    const line6 = getLinePosition(line4.x, line4.y, 64, wallHeight, -Math.PI / 4);
+
     // 수직 벽
-    const ground7 = Bodies.rectangle(leftX - (wallHeight) * Math.sin(Math.PI/4), wallY + (wallHeight) + (wallHeight) * Math.cos(Math.PI/4), 64, wallHeight, { isStatic: true });
-    const ground8 = Bodies.rectangle(rightX - (wallHeight) * Math.sin(Math.PI/4),  wallY + (wallHeight) + (wallHeight) * Math.cos(Math.PI/4), 64, wallHeight, { isStatic: true });
+    const ground7 = Bodies.rectangle(line5.x, line5.y, 64, wallHeight, { isStatic: true, angle: line5.angle, render: {
+      fillStyle: '#FFFFFF'
+    } });
+    const ground8 = Bodies.rectangle(line6.x, line6.y, 64, wallHeight, { isStatic: true, angle: line6.angle, render: {
+      fillStyle: '#FFFFFF'
+    } });
+    
+    const line7 = getLinePosition(line5.x, line5.y, 64, wallHeight, line5.angle);
+    const line8 = getLinePosition(line6.x, line6.y, 64, wallHeight, line6.angle);
+
+    // 수직 벽
+    const ground9 = Bodies.rectangle(line7.x, line7.y, 64, wallHeight, { isStatic: true, render: {
+      fillStyle: '#FFFFFF'
+    } });
+    const ground10 = Bodies.rectangle(line8.x, line8.y, 64, wallHeight, { isStatic: true, render: {
+      fillStyle: '#FFFFFF'
+    } });
     
 
     const floor = Bodies.rectangle(
@@ -120,7 +165,7 @@ function App() {
 
     // world(mouseConstraint);
     // add all of the bodies to the world
-    Composite.add(world, [boxA, boxB, ground, ground2, ground3, ground4, ground5, ground6, ground7, ground8, floor, mouseConstraint]);
+    Composite.add(world, [boxA, boxB, ground, ground2, ground3, ground4, ground5, ground6, ground7, ground8, ground9, ground10, floor, mouseConstraint]);
 
     // create runner
     const runner = Runner.create();
@@ -132,8 +177,8 @@ function App() {
     Matter.Events.on(engine, 'afterUpdate', () => {
       if (!boxB.position) return;
       Render.lookAt(render, boxB, {
-        x: width / 2, // window.innerWidth,
-        y: width / 2, // window.innerHeight
+        x: width / 2,
+        y: height / 2
       });
     });
 
