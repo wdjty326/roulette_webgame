@@ -18,6 +18,7 @@ function App() {
       Runner = Matter.Runner,
       Bodies = Matter.Bodies,
       Composite = Matter.Composite,
+      Body = Matter.Body,
       Mouse = Matter.Mouse,
       MouseConstraint = Matter.MouseConstraint;
 
@@ -67,32 +68,69 @@ function App() {
       }
     });
 
+    // SVG 경로 정의
+    const svgPath = `M 1110 -12.0546 
+      L 1112.18 1187.94
+      L 357.197 2096.9
+      M 1830 -0.054595
+      L 1832.18 1199.94
+      L 1094.2 2088.51
+      M 1287.85 4004.15
+      L 359.976 3243.2
+      M 1985.46 3989.19
+      L 1075.97 3243.2
+      M 364 2068.95
+      L 366.184 3268.94
+      M 1084 2080.95
+      L 1086.18 3280.94
+      M 1219 3965.95
+      L 1221.18 5165.94
+      M 1939 3977.95
+      L 1941.18 5177.94
+      M 1210.89 5184.15
+      L 315.888 6362.15
+      M 1930.77 5159.69
+      L 2828.77 6325.69
+      M 339.181 7610.24
+      L 1464.18 9142.24
+      M 2812.9 7561.73
+      L 1746.9 9148.73
+      M 321.995 6343.46
+      L 344.995 7627.46
+      M 2816 6310.5
+      L 2816 7544.5
+      M 1468 9131.95
+      L 1470.18 10331.9
+      M 1750 9131.95
+      L 1752.18 10331.9`;
+    // SVG 요소 생성
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    
+    path.setAttribute('d', svgPath);
+    svg.appendChild(path);
+    document.body.appendChild(svg);  // 임시로 DOM에 추가
 
-    // 이걸로 내일 만들거임....
-    const wall = Bodies.fromVertices(1250, 200, [
-      [
-        { x: 0, y: 0 },
-        { x: 200, y: 0 },
-        { x: 200, y: 200 },
-        { x: 0, y: 200 }
-      ]
-    ], {
+    // SVG path를 vertices로 변환
+    const vertices = Matter.Svg.pathToVertices(path, 1);
+    
+    document.body.removeChild(svg);  // DOM에서 제거
+
+    // SVG로 벽 생성
+    const svgWall = Bodies.fromVertices(0, 0, [vertices], {
       isStatic: true,
-      angle: Math.PI / 4,
-      // restitution: 0.8,
-      // friction: 0.01,
-      // density: 0.001,
       render: {
         fillStyle: '#FFFFFF'
       }
     });
-    Composite.add(world, [wall]);
+
     const walls = ZIGZAG_VALLEY_CONFIG.walls.map(wall => {
+      // TODO:: Bodies.fromVertices 로 바꿔야 함
       const ground = Bodies.rectangle(wall.x, wall.y, wall.width, wall.height, { 
         isStatic: true, 
         angle: wall.angle,
         restitution: 0.8,  // 벽도 탄성 추가
-        chamfer: { radius: 20 },
+        chamfer: { radius: 0 },
         friction: 0.01,
         render: {
           fillStyle: '#FFFFFF',
@@ -134,9 +172,31 @@ function App() {
       mouse.absolute.y = mouse.position.y + offset.y;
     });
 
-    // world(mouseConstraint);
-    // add all of the bodies to the world
-    Composite.add(world, [boxA, boxB, ...walls, floor, mouseConstraint]);
+    // 회전하는 장애물 생성
+    const rotatingObstacle = Bodies.rectangle(-400, 5000, 800, 20, {
+      isStatic: true,
+      angle: 0,
+      render: {
+        fillStyle: '#FF4444'
+      }
+    });
+
+    // 회전 애니메이션
+    Matter.Events.on(engine, 'beforeUpdate', () => {
+      // 매 프레임마다 0.02 라디안씩 회전
+      Matter.Body.rotate(rotatingObstacle, 0.02);
+    });
+
+    // world에 추가 (기존 Composite.add 라인 수정)
+    Composite.add(world, [
+      boxA, 
+      boxB, 
+      ...walls, 
+      floor, 
+      rotatingObstacle,  // 회전하는 장애물 추가
+      mouseConstraint,
+      svgWall,
+    ]);
 
     // create runner
     const runner = Runner.create();
@@ -148,10 +208,10 @@ function App() {
     Matter.Events.on(engine, 'afterUpdate', () => {
       if (!boxB.position) return;
       Render.lookAt(render, boxB, {
-        x: width / 2,
-        y: height / 2
-        // x: window.innerWidth,
-        // y: window.innerHeight
+        // x: width / 2,
+        // y: height / 2
+        x: window.innerWidth,
+        y: window.innerHeight
       });
     });
 
