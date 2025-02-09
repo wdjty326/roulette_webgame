@@ -1,13 +1,38 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 // import GameScreen from './screens/gameScreens.ts'
 import Matter from 'matter-js';
 import ZIGZAG_VALLEY_CONFIG from './maps/ZizzagValley';
+import MatterContext from './matter';
+import MainScreen from './screens/MainScreen';
 
 
 function App() {
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
   const targetRef = useRef<HTMLDivElement | null>(null);
+  const itemsRef = useRef<{
+    body: Matter.Body;
+    name: string;
+  }[]>([]);
+
+  // 엔진 상태 관리를 위한 ref 추가
+  const runnerRef = useRef<Matter.Runner | null>(null);
+  
+  // 일시정지/재개 함수
+  const togglePause = useCallback(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+
+    const runner = runnerRef.current;
+    if (!runner) return;
+    if (runner.enabled) {
+      // 일시정지
+      Matter.Runner.stop(runner);
+    } else {
+      // 재개
+      Matter.Runner.start(runner, engine);
+    }
+  }, []);
 
   useEffect(() => {
     if (!targetRef.current) return;
@@ -17,10 +42,7 @@ function App() {
       Render = Matter.Render,
       Runner = Matter.Runner,
       Bodies = Matter.Bodies,
-      Composite = Matter.Composite,
-      Body = Matter.Body,
-      Mouse = Matter.Mouse,
-      MouseConstraint = Matter.MouseConstraint;
+      Composite = Matter.Composite;
 
     // create an engine
     const engine = Engine.create({
@@ -30,9 +52,6 @@ function App() {
       }
     });
     engineRef.current = engine;
-
-    const width = 2880;
-    const height = 12800;
 
     const world = engine.world;
     // create a renderer
@@ -49,6 +68,7 @@ function App() {
     renderRef.current = render;
     // run te renderer
     Render.run(render);
+
     // create two boxes and a ground
     const boxA = Bodies.circle(1000, 200, 40, {
       restitution: 0.8,  // 탄성 (0~1)
@@ -68,62 +88,6 @@ function App() {
       }
     });
 
-    // SVG 경로 정의
-    const svgPath = `M 1110 -12.0546 
-      L 1112.18 1187.94
-      L 357.197 2096.9
-      M 1830 -0.054595
-      L 1832.18 1199.94
-      L 1094.2 2088.51
-      M 1287.85 4004.15
-      L 359.976 3243.2
-      M 1985.46 3989.19
-      L 1075.97 3243.2
-      M 364 2068.95
-      L 366.184 3268.94
-      M 1084 2080.95
-      L 1086.18 3280.94
-      M 1219 3965.95
-      L 1221.18 5165.94
-      M 1939 3977.95
-      L 1941.18 5177.94
-      M 1210.89 5184.15
-      L 315.888 6362.15
-      M 1930.77 5159.69
-      L 2828.77 6325.69
-      M 339.181 7610.24
-      L 1464.18 9142.24
-      M 2812.9 7561.73
-      L 1746.9 9148.73
-      M 321.995 6343.46
-      L 344.995 7627.46
-      M 2816 6310.5
-      L 2816 7544.5
-      M 1468 9131.95
-      L 1470.18 10331.9
-      M 1750 9131.95
-      L 1752.18 10331.9`;
-    // SVG 요소 생성
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    
-    path.setAttribute('d', svgPath);
-    svg.appendChild(path);
-    document.body.appendChild(svg);  // 임시로 DOM에 추가
-
-    // SVG path를 vertices로 변환
-    const vertices = Matter.Svg.pathToVertices(path, 1);
-    
-    document.body.removeChild(svg);  // DOM에서 제거
-
-    // SVG로 벽 생성
-    const svgWall = Bodies.fromVertices(0, 0, [vertices], {
-      isStatic: true,
-      render: {
-        fillStyle: '#FFFFFF'
-      }
-    });
-
     const walls = ZIGZAG_VALLEY_CONFIG.walls.map(wall => {
       // TODO:: Bodies.fromVertices 로 바꿔야 함
       const ground = Bodies.rectangle(wall.x, wall.y, wall.width, wall.height, { 
@@ -133,43 +97,43 @@ function App() {
         chamfer: { radius: 0 },
         friction: 0.01,
         render: {
-          fillStyle: '#FFFFFF',
+          fillStyle: '#00F2FF',
         } 
       });
       Matter.Body.setCentre(ground, { x: 0, y: 0 }, true);
       return ground;
     });
 
-    const floor = Bodies.rectangle(
-        width/2,      // x: 사각형의 중심점 x좌표
-        height - 30,  // y: 사각형의 중심점 y좌표
-        width,        // width: 사각형의 전체 너비
-        60,          // height: 사각형의 전체 높이
-        { 
-            isStatic: true 
-        }
-    );
+    // const floor = Bodies.rectangle(
+    //     width/2,      // x: 사각형의 중심점 x좌표
+    //     height - 30,  // y: 사각형의 중심점 y좌표
+    //     width,        // width: 사각형의 전체 너비
+    //     60,          // height: 사각형의 전체 높이
+    //     { 
+    //         isStatic: true 
+    //     }
+    // );
     
 
-    const mouse = Mouse.create(render.canvas);
-    const mouseConstraint = MouseConstraint.create(engine, {
-      mouse: mouse,
-      constraint: {
-        stiffness: 0.2,
-      }
-    });
+    // const mouse = Mouse.create(render.canvas);
+    // const mouseConstraint = MouseConstraint.create(engine, {
+    //   mouse: mouse,
+    //   constraint: {
+    //     stiffness: 0.2,
+    //   }
+    // });
 
     // 마우스 위치를 뷰포트에 맞게 조정
     Matter.Events.on(engine, 'beforeUpdate', () => {
-      const bounds = render.bounds;
-      const offset = {
-        x: bounds.min.x,
-        y: bounds.min.y
-      };
+      // const bounds = render.bounds;
+      // const offset = {
+      //   x: bounds.min.x,
+      //   y: bounds.min.y
+      // };
       
       // 마우스 위치 업데이트
-      mouse.absolute.x = mouse.position.x + offset.x;
-      mouse.absolute.y = mouse.position.y + offset.y;
+      // mouse.absolute.x = mouse.position.x + offset.x;
+      // mouse.absolute.y = mouse.position.y + offset.y;
     });
 
     // 회전하는 장애물 생성
@@ -177,7 +141,7 @@ function App() {
       isStatic: true,
       angle: 0,
       render: {
-        fillStyle: '#FF4444'
+        fillStyle: '#00F2FF'
       }
     });
 
@@ -192,17 +156,35 @@ function App() {
       boxA, 
       boxB, 
       ...walls, 
-      floor, 
+      // floor, 
       rotatingObstacle,  // 회전하는 장애물 추가
-      mouseConstraint,
-      svgWall,
+      // mouseConstraint,
     ]);
 
-    // create runner
+    // runner 생성 및 저장
     const runner = Runner.create();
+    runnerRef.current = runner;
+
+    // 키보드 이벤트 리스너
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        togglePause();
+      }
+    };
+    
+    window.addEventListener('keypress', handleKeyPress);
+
+
+    Render.lookAt(render, boxB, {
+      // x: width / 2,
+      // y: height / 2
+      x: ZIGZAG_VALLEY_CONFIG.width / 2,
+      y: 0
+    });
 
     // run the engine
     Runner.run(runner, engine);
+    // Render.stop(render);
 
     // 카메라 따라가기
     Matter.Events.on(engine, 'afterUpdate', () => {
@@ -210,18 +192,30 @@ function App() {
       Render.lookAt(render, boxB, {
         // x: width / 2,
         // y: height / 2
-        x: window.innerWidth,
+        x: ZIGZAG_VALLEY_CONFIG.width,
         y: window.innerHeight
       });
     });
 
+    // Matter.Events.on(engine, 'afterUpdate', () => {
+    //   if (boxA.position.y > ZIGZAG_VALLEY_CONFIG.height) {
+    //     Composite.remove(world, boxA);
+    //   }
+
+    //   if (boxB.position.y > ZIGZAG_VALLEY_CONFIG.height) {
+    //     Composite.remove(world, boxB);
+    //   }
+    // });
+
+    // cleanup
     return () => {
+      window.removeEventListener('keypress', handleKeyPress);
       // 이벤트 리스너 제거
       Matter.Events.off(engine, 'beforeUpdate');
       Matter.Events.off(engine, 'afterUpdate');
 
       // 러너 정지
-      Runner.stop(runner);
+      Matter.Runner.stop(runner);
 
       // 렌더러 정지 및 캔버스 제거
       Render.stop(render);
@@ -239,7 +233,10 @@ function App() {
 
 
   return (
-    <div ref={targetRef}></div>
+    <MatterContext.Provider value={{ engine: engineRef.current, runner: runnerRef.current, items: itemsRef.current, togglePause }}>
+      <div ref={targetRef}></div>
+      <MainScreen />
+    </MatterContext.Provider>
   )
 }
 
