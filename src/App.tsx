@@ -17,6 +17,7 @@ function App() {
 
   // 엔진 상태 관리를 위한 ref 추가
   const runnerRef = useRef<Matter.Runner | null>(null);
+  const isRunningRef = useRef<boolean>(true);  // 실행 상태 추적용 ref 추가
   
   // 일시정지/재개 함수
   const togglePause = useCallback(() => {
@@ -25,12 +26,15 @@ function App() {
 
     const runner = runnerRef.current;
     if (!runner) return;
-    if (runner.enabled) {
+
+    isRunningRef.current = !isRunningRef.current;  // 상태 토글
+    
+    if (!isRunningRef.current) {
       // 일시정지
-      Matter.Runner.stop(runner);
+      runner.enabled = false;  // Runner의 enabled 속성을 직접 수정
     } else {
       // 재개
-      Matter.Runner.start(runner, engine);
+      runner.enabled = true;
     }
   }, []);
 
@@ -184,28 +188,36 @@ function App() {
 
     // run the engine
     Runner.run(runner, engine);
+    runner.enabled = false;
     // Render.stop(render);
 
     // 카메라 따라가기
     Matter.Events.on(engine, 'afterUpdate', () => {
-      if (!boxB.position) return;
-      Render.lookAt(render, boxB, {
+      let target = null;
+      if (boxA?.position.y > boxB?.position.y) {
+        target = boxA;
+      } else if (boxA?.position.y < boxB?.position.y) {
+        target = boxB;
+      }
+      if (!target?.position) return;
+
+      Render.lookAt(render, target, {
         // x: width / 2,
         // y: height / 2
-        x: ZIGZAG_VALLEY_CONFIG.width,
-        y: window.innerHeight
+        x: ZIGZAG_VALLEY_CONFIG.width / 2,
+        y: 0
       });
     });
 
-    // Matter.Events.on(engine, 'afterUpdate', () => {
-    //   if (boxA.position.y > ZIGZAG_VALLEY_CONFIG.height) {
-    //     Composite.remove(world, boxA);
-    //   }
+    Matter.Events.on(engine, 'afterUpdate', () => {
+      if (boxA.position.y > ZIGZAG_VALLEY_CONFIG.height) {
+        Composite.remove(world, boxA);
+      }
 
-    //   if (boxB.position.y > ZIGZAG_VALLEY_CONFIG.height) {
-    //     Composite.remove(world, boxB);
-    //   }
-    // });
+      if (boxB.position.y > ZIGZAG_VALLEY_CONFIG.height) {
+        Composite.remove(world, boxB);
+      }
+    });
 
     // cleanup
     return () => {
