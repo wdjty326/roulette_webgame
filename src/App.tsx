@@ -4,6 +4,7 @@ import Matter from 'matter-js';
 import ZIGZAG_VALLEY_CONFIG from './maps/ZizzagValley';
 import MatterContext from './matter';
 import MainScreen from './screens/MainScreen';
+import useRouletteStore from './stores/store';
 
 
 function App() {
@@ -18,7 +19,7 @@ function App() {
   // 엔진 상태 관리를 위한 ref 추가
   const runnerRef = useRef<Matter.Runner | null>(null);
   const isRunningRef = useRef<boolean>(true);  // 실행 상태 추적용 ref 추가
-  
+
   // 일시정지/재개 함수
   const togglePause = useCallback(() => {
     const engine = engineRef.current;
@@ -28,7 +29,7 @@ function App() {
     if (!runner) return;
 
     isRunningRef.current = !isRunningRef.current;  // 상태 토글
-    
+
     if (!isRunningRef.current) {
       // 일시정지
       runner.enabled = false;  // Runner의 enabled 속성을 직접 수정
@@ -73,17 +74,59 @@ function App() {
     // run te renderer
     Render.run(render);
 
+    useRouletteStore.subscribe((state) => {
+      let startX = 1000;
+      let startY = 200;
+
+      // label로 물체 찾기
+      const findBodyByLabel = (label: string) => {
+        return Matter.Composite.allBodies(world).find(
+          body => body.label === label
+        );
+      };
+
+      // 있으면 추가
+      state.itemList.forEach((item) => {
+        const body = findBodyByLabel(item.uuid);
+        if (body) {
+          startX = body.position.x + 80;
+          startY = body.position.y;
+        } else {
+          const body = Bodies.circle(startX, startY, 40, {
+            label: item.uuid,
+            restitution: 0.8,
+            friction: 0.01,
+            density: 0.001,
+          });
+          startX += 80;
+          Composite.add(world, body);
+        }
+      });
+
+      // 없으면 제거
+      Matter.Composite.allBodies(world).forEach(body => {
+        if (body.label) {
+          const item = state.itemList.find(item => item.uuid === body.label);
+          if (!item) {
+            Composite.remove(world, body);
+          }
+        }
+      });
+    });
+
     // create two boxes and a ground
     const boxA = Bodies.circle(1000, 200, 40, {
-      restitution: 0.8,  // 탄성 (0~1)
-      friction: 0.01,    // 마찰 (낮을수록 잘 미끄러짐)
-      density: 0.001,    // 밀도 (가벼울수록 잘 튕김)
+      label: 'ball_1',  // 고유 라벨 추가
+      restitution: 0.8,
+      friction: 0.01,
+      density: 0.001,
       render: {
         fillStyle: '#F35e66'
       }
     });
 
     const boxB = Bodies.circle(1250, 50, 40, {
+      label: 'ball_2',  // 고유 라벨 추가
       restitution: 0.8,
       friction: 0.01,
       density: 0.001,
@@ -94,15 +137,15 @@ function App() {
 
     const walls = ZIGZAG_VALLEY_CONFIG.walls.map(wall => {
       // TODO:: Bodies.fromVertices 로 바꿔야 함
-      const ground = Bodies.rectangle(wall.x, wall.y, wall.width, wall.height, { 
-        isStatic: true, 
+      const ground = Bodies.rectangle(wall.x, wall.y, wall.width, wall.height, {
+        isStatic: true,
         angle: wall.angle,
         restitution: 0.8,  // 벽도 탄성 추가
         chamfer: { radius: 0 },
         friction: 0.01,
         render: {
           fillStyle: '#00F2FF',
-        } 
+        }
       });
       Matter.Body.setCentre(ground, { x: 0, y: 0 }, true);
       return ground;
@@ -117,7 +160,7 @@ function App() {
     //         isStatic: true 
     //     }
     // );
-    
+
 
     // const mouse = Mouse.create(render.canvas);
     // const mouseConstraint = MouseConstraint.create(engine, {
@@ -134,7 +177,7 @@ function App() {
       //   x: bounds.min.x,
       //   y: bounds.min.y
       // };
-      
+
       // 마우스 위치 업데이트
       // mouse.absolute.x = mouse.position.x + offset.x;
       // mouse.absolute.y = mouse.position.y + offset.y;
@@ -157,9 +200,9 @@ function App() {
 
     // world에 추가 (기존 Composite.add 라인 수정)
     Composite.add(world, [
-      boxA, 
-      boxB, 
-      ...walls, 
+      boxA,
+      boxB,
+      ...walls,
       // floor, 
       rotatingObstacle,  // 회전하는 장애물 추가
       // mouseConstraint,
@@ -175,7 +218,7 @@ function App() {
         togglePause();
       }
     };
-    
+
     window.addEventListener('keypress', handleKeyPress);
 
 
@@ -209,6 +252,7 @@ function App() {
       });
     });
 
+    // 예시: 특정 라벨의 물체 제거
     Matter.Events.on(engine, 'afterUpdate', () => {
       if (boxA.position.y > ZIGZAG_VALLEY_CONFIG.height) {
         Composite.remove(world, boxA);
@@ -232,7 +276,7 @@ function App() {
       // 렌더러 정지 및 캔버스 제거
       Render.stop(render);
       render.canvas.remove();
-      
+
       // 엔진 초기화
       Matter.World.clear(engine.world, false);
       Matter.Engine.clear(engine);
