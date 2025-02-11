@@ -3,10 +3,7 @@ import { createContext, useContext } from "react";
 export const MatterContext = createContext<{
     engine: Matter.Engine | null;
     runner: Matter.Runner | null;
-    items: {
-        body: Matter.Body;
-        name: string;
-    }[];
+    items:  Matter.Body[];
     togglePause: () => void;
 }>({
     engine: null,

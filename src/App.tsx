@@ -13,10 +13,8 @@ function App() {
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
   const targetRef = useRef<HTMLDivElement | null>(null);
-  const itemsRef = useRef<{
-    body: Matter.Body;
-    name: string;
-  }[]>([]);
+  const previousItemRef = useRef<string>('');
+  const itemsRef = useRef<Matter.Body[]>([]);
 
   // 엔진 상태 관리를 위한 ref 추가
   const runnerRef = useRef<Matter.Runner | null>(null);
@@ -77,6 +75,10 @@ function App() {
     Render.run(render);
 
     const renderItem = (list: string[]) => {
+      // debugger;
+      // if (previousItemRef.current === list.join(',')) return;
+      // previousItemRef.current = list.join(',');
+
       let startX = 1000;
       let startY = 200;
 
@@ -102,7 +104,7 @@ function App() {
       const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
       // 있으면 추가
-      list.forEach((item, index) => {
+      const bodies = list.map((item, index) => {
         const color = getRandomColor();
         const body = Bodies.circle(startX, startY, 40, {
           label: `${ITEM_LABEL_PREFIX}#${index}`,
@@ -122,8 +124,19 @@ function App() {
           }
         });
         startX += 80;
-        Composite.add(world, body);
+        return body;
       });
+
+      if (bodies.length > 0) {
+        Composite.add(world, bodies);
+        Render.lookAt(render, bodies[0], {
+          // x: width / 2,
+          // y: height / 2
+          x: ZIGZAG_VALLEY_CONFIG.width / 2,
+          y: 0
+        });
+      }
+      itemsRef.current = bodies;
     }
 
     useRouletteStore.subscribe((state) => {
@@ -132,26 +145,26 @@ function App() {
 
     renderItem(useRouletteStore.getState().itemList);
 
-    // create two boxes and a ground
-    const boxA = Bodies.circle(1000, 200, 40, {
-      label: 'ball_1',  // 고유 라벨 추가
-      restitution: 0.8,
-      friction: 0.01,
-      density: 0.001,
-      render: {
-        fillStyle: '#F35e66'
-      }
-    });
+    // // create two boxes and a ground
+    // const boxA = Bodies.circle(1000, 200, 40, {
+    //   label: 'ball_1',  // 고유 라벨 추가
+    //   restitution: 0.8,
+    //   friction: 0.01,
+    //   density: 0.001,
+    //   render: {
+    //     fillStyle: '#F35e66'
+    //   }
+    // });
 
-    const boxB = Bodies.circle(1250, 50, 40, {
-      label: 'ball_2',  // 고유 라벨 추가
-      restitution: 0.8,
-      friction: 0.01,
-      density: 0.001,
-      render: {
-        fillStyle: '#63C132'
-      }
-    });
+    // const boxB = Bodies.circle(1250, 50, 40, {
+    //   label: 'ball_2',  // 고유 라벨 추가
+    //   restitution: 0.8,
+    //   friction: 0.01,
+    //   density: 0.001,
+    //   render: {
+    //     fillStyle: '#63C132'
+    //   }
+    // });
 
     const walls = ZIGZAG_VALLEY_CONFIG.walls.map(wall => {
       // TODO:: Bodies.fromVertices 로 바꿔야 함
@@ -219,8 +232,6 @@ function App() {
 
     // world에 추가 (기존 Composite.add 라인 수정)
     Composite.add(world, [
-      boxA,
-      boxB,
       ...walls,
       // floor, 
       rotatingObstacle,  // 회전하는 장애물 추가
@@ -240,14 +251,6 @@ function App() {
 
     window.addEventListener('keypress', handleKeyPress);
 
-
-    Render.lookAt(render, boxB, {
-      // x: width / 2,
-      // y: height / 2
-      x: ZIGZAG_VALLEY_CONFIG.width / 2,
-      y: 0
-    });
-
     // run the engine
     Runner.run(runner, engine);
     runner.enabled = false;
@@ -255,14 +258,14 @@ function App() {
 
     // 카메라 따라가기
     Matter.Events.on(engine, 'afterUpdate', () => {
-      let target = null;
-      if (boxA?.position.y > boxB?.position.y) {
-        target = boxA;
-      } else if (boxA?.position.y < boxB?.position.y) {
-        target = boxB;
-      }
-      if (!target?.position) return;
-
+      if (itemsRef.current.length === 0) return;
+      const target = itemsRef.current.reduce((prev, current) => {
+        if (prev.position.y > current.position.y) {
+          return prev;
+        } else {
+          return current;
+        }
+      }, itemsRef.current[0]);
       Render.lookAt(render, target, {
         // x: width / 2,
         // y: height / 2
@@ -273,13 +276,12 @@ function App() {
 
     // 예시: 특정 라벨의 물체 제거
     Matter.Events.on(engine, 'afterUpdate', () => {
-      if (boxA.position.y > ZIGZAG_VALLEY_CONFIG.height) {
-        Composite.remove(world, boxA);
-      }
-
-      if (boxB.position.y > ZIGZAG_VALLEY_CONFIG.height) {
-        Composite.remove(world, boxB);
-      }
+      if (itemsRef.current.length === 0) return;
+      itemsRef.current.forEach((item) => {
+        if (item.position.y > ZIGZAG_VALLEY_CONFIG.height) {
+          Composite.remove(world, item);
+        }
+      });
     });
 
     // cleanup
