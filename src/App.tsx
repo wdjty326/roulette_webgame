@@ -5,6 +5,8 @@ import ZIGZAG_VALLEY_CONFIG from './maps/ZizzagValley';
 import MatterContext from './matter';
 import MainScreen from './screens/MainScreen';
 import useRouletteStore from './stores/store';
+import { v4 } from 'uuid';
+import { ITEM_LABEL_PREFIX, WALL_LABEL_PREFIX } from './consts';
 
 
 function App() {
@@ -74,45 +76,61 @@ function App() {
     // run te renderer
     Render.run(render);
 
-    useRouletteStore.subscribe((state) => {
+    const renderItem = (list: string[]) => {
       let startX = 1000;
       let startY = 200;
 
-      // label로 물체 찾기
-      const findBodyByLabel = (label: string) => {
-        return Matter.Composite.allBodies(world).find(
-          body => body.label === label
-        );
-      };
+      // 없으면 제거
+      Matter.Composite.allBodies(world)
+        .filter(body => body.label?.startsWith(ITEM_LABEL_PREFIX))
+        .forEach(body => {
+          Composite.remove(world, body);
+        });
+
+      // 7가지 색상 정의
+      const COLORS = [
+        '#FF6B6B',  // 빨강
+        '#4ECDC4',  // 청록
+        '#45B7D1',  // 하늘
+        '#96CEB4',  // 민트
+        '#FFEEAD',  // 노랑
+        '#D4A5A5',  // 분홍
+        '#9B59B6'   // 보라
+      ];
+
+      // 랜덤 색상 선택 함수
+      const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
       // 있으면 추가
-      state.itemList.forEach((item) => {
-        const body = findBodyByLabel(item.uuid);
-        if (body) {
-          startX = body.position.x + 80;
-          startY = body.position.y;
-        } else {
-          const body = Bodies.circle(startX, startY, 40, {
-            label: item.uuid,
-            restitution: 0.8,
-            friction: 0.01,
-            density: 0.001,
-          });
-          startX += 80;
-          Composite.add(world, body);
-        }
-      });
-
-      // 없으면 제거
-      Matter.Composite.allBodies(world).forEach(body => {
-        if (body.label) {
-          const item = state.itemList.find(item => item.uuid === body.label);
-          if (!item) {
-            Composite.remove(world, body);
+      list.forEach((item, index) => {
+        const color = getRandomColor();
+        const body = Bodies.circle(startX, startY, 40, {
+          label: `${ITEM_LABEL_PREFIX}#${index}`,
+          restitution: 0.8,
+          friction: 0.01,
+          density: 0.001,
+          render: {
+            fillStyle: color,
+            sprite: {
+              texture: `data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="40" fill="${color.replace('#', '%23')}"/>
+                <text x="40" y="40" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="16">${item}</text>
+              </svg>`,
+              xScale: 1,
+              yScale: 1
+            }
           }
-        }
+        });
+        startX += 80;
+        Composite.add(world, body);
       });
+    }
+
+    useRouletteStore.subscribe((state) => {
+      renderItem(state.itemList);
     });
+
+    renderItem(useRouletteStore.getState().itemList);
 
     // create two boxes and a ground
     const boxA = Bodies.circle(1000, 200, 40, {
@@ -138,6 +156,7 @@ function App() {
     const walls = ZIGZAG_VALLEY_CONFIG.walls.map(wall => {
       // TODO:: Bodies.fromVertices 로 바꿔야 함
       const ground = Bodies.rectangle(wall.x, wall.y, wall.width, wall.height, {
+        label: WALL_LABEL_PREFIX + v4(),
         isStatic: true,
         angle: wall.angle,
         restitution: 0.8,  // 벽도 탄성 추가

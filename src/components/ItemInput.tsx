@@ -5,12 +5,12 @@ import { StyledApplyButton, StyledItemInput, StyledTextarea } from "./ItemInput.
 
 
 const ItemInput = () => {
-    const [value, setValue] = useState<string>('');
+    const [value, setValue] = useState<string>();
     const itemList = useRouletteStore((state) => state.itemList);
 
     useEffect(() => {
         const handleApply = () => {
-            useRouletteStore.getState().setItemList([...itemList, { name: value, uuid: uuidv4() }]);
+            // useRouletteStore.getState().setItemList([...itemList, { name: value, uuid: uuidv4() }]);
         };
         handleApply();
     }, [value]);

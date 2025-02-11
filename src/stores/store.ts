@@ -1,19 +1,28 @@
-import { v4 } from "uuid";
+// import { v4 } from "uuid";
 import { create } from "zustand";
+// import { ITEM_LABEL_PREFIX } from "../consts";
 
 interface RouletteStore {
     isRunning: boolean;
-    itemList: Item[];
+    itemList: string[];
     
     setIsRunning: (isRunning: boolean) => void;
-    setItemList: (itemList: Item[]) => void;
+    setItemList: (itemList: string[]) => void;
+    getItemListString: () => string;
 }
 
-const useRouletteStore = create<RouletteStore>((set) => ({
+const useRouletteStore = create<RouletteStore>((set,get) => ({
     isRunning: false,
-    itemList: [{ name: '짱아', uuid: v4() }, { name: '짱아', uuid: v4() }, { name: '짱구', uuid: v4() }],
+    itemList: ['짱아', '짱아', '짱구', '짱구'],
     setIsRunning: (isRunning) => set({ isRunning }),
     setItemList: (itemList) => set({ itemList }),
+    getItemListString: () => {
+        // return get().itemList.reduce((item, arr) => {
+
+
+        // }, []).map(item => item.name).join(', ');
+        return '';
+    }
 }));
 
 export default useRouletteStore;
