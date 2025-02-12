@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react'
-// import GameScreen from './screens/gameScreens.ts'
+import { useEffect, useRef } from 'react'
 import Matter from 'matter-js';
 import ZIGZAG_VALLEY_CONFIG from './maps/ZizzagValley';
-import MatterContext from './matter';
 import MainScreen from './screens/MainScreen';
 import useRouletteStore from './stores/store';
 import { v4 } from 'uuid';
@@ -13,31 +11,12 @@ function App() {
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
   const targetRef = useRef<HTMLDivElement | null>(null);
-  const previousItemRef = useRef<string>('');
+  // const previousItemRef = useRef<string>('');
   const itemsRef = useRef<Matter.Body[]>([]);
 
   // 엔진 상태 관리를 위한 ref 추가
   const runnerRef = useRef<Matter.Runner | null>(null);
-  const isRunningRef = useRef<boolean>(true);  // 실행 상태 추적용 ref 추가
-
-  // 일시정지/재개 함수
-  const togglePause = useCallback(() => {
-    const engine = engineRef.current;
-    if (!engine) return;
-
-    const runner = runnerRef.current;
-    if (!runner) return;
-
-    isRunningRef.current = !isRunningRef.current;  // 상태 토글
-
-    if (!isRunningRef.current) {
-      // 일시정지
-      runner.enabled = false;  // Runner의 enabled 속성을 직접 수정
-    } else {
-      // 재개
-      runner.enabled = true;
-    }
-  }, []);
+  const isRunningRef = useRef<boolean>(useRouletteStore.getState().isRunning);  // 실행 상태 추적용 ref 추가
 
   useEffect(() => {
     if (!targetRef.current) return;
@@ -79,7 +58,7 @@ function App() {
       // if (previousItemRef.current === list.join(',')) return;
       // previousItemRef.current = list.join(',');
 
-      let startX = 1000;
+      let startX = ZIGZAG_VALLEY_CONFIG.width / 2;
       let startY = 200;
 
       // 없으면 제거
@@ -123,7 +102,7 @@ function App() {
             }
           }
         });
-        startX += 80;
+        startX += 120;
         return body;
       });
 
@@ -132,8 +111,8 @@ function App() {
         Render.lookAt(render, bodies[0], {
           // x: width / 2,
           // y: height / 2
-          x: ZIGZAG_VALLEY_CONFIG.width / 2,
-          y: 0
+          x: window.innerWidth,
+          y: window.innerHeight / 2
         });
       }
       itemsRef.current = bodies;
@@ -141,9 +120,19 @@ function App() {
 
     useRouletteStore.subscribe((state) => {
       renderItem(state.itemList);
-    });
 
-    renderItem(useRouletteStore.getState().itemList);
+      const runner = runnerRef.current;
+      if (!runner) return;
+
+      if (isRunningRef.current !== state.isRunning) {
+        isRunningRef.current = state.isRunning;
+        if (isRunningRef.current) {
+          runner.enabled = true;
+        } else {
+          runner.enabled = false;
+        }
+      }
+    });
 
     // // create two boxes and a ground
     // const boxA = Bodies.circle(1000, 200, 40, {
@@ -231,25 +220,15 @@ function App() {
     });
 
     // world에 추가 (기존 Composite.add 라인 수정)
+    Composite.add(world, walls);
     Composite.add(world, [
-      ...walls,
-      // floor, 
-      rotatingObstacle,  // 회전하는 장애물 추가
-      // mouseConstraint,
+      rotatingObstacle,
     ]);
+    renderItem(useRouletteStore.getState().itemList);
 
     // runner 생성 및 저장
     const runner = Runner.create();
     runnerRef.current = runner;
-
-    // 키보드 이벤트 리스너
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        togglePause();
-      }
-    };
-
-    window.addEventListener('keypress', handleKeyPress);
 
     // run the engine
     Runner.run(runner, engine);
@@ -260,17 +239,15 @@ function App() {
     Matter.Events.on(engine, 'afterUpdate', () => {
       if (itemsRef.current.length === 0) return;
       const target = itemsRef.current.reduce((prev, current) => {
-        if (prev.position.y > current.position.y) {
+        if (prev.position.y > current.position.y || !current.render.visible) {
           return prev;
         } else {
           return current;
         }
       }, itemsRef.current[0]);
       Render.lookAt(render, target, {
-        // x: width / 2,
-        // y: height / 2
-        x: ZIGZAG_VALLEY_CONFIG.width / 2,
-        y: 0
+        x: window.innerWidth,
+        y: window.innerHeight / 2
       });
     });
 
@@ -286,7 +263,6 @@ function App() {
 
     // cleanup
     return () => {
-      window.removeEventListener('keypress', handleKeyPress);
       // 이벤트 리스너 제거
       Matter.Events.off(engine, 'beforeUpdate');
       Matter.Events.off(engine, 'afterUpdate');
@@ -310,10 +286,10 @@ function App() {
 
 
   return (
-    <MatterContext.Provider value={{ engine: engineRef.current, runner: runnerRef.current, items: itemsRef.current, togglePause }}>
+    <>
       <div ref={targetRef}></div>
       <MainScreen />
-    </MatterContext.Provider>
+    </>
   )
 }
 

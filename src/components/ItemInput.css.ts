@@ -10,15 +10,15 @@ export const StyledItemInput = style({
 });
 
 export const StyledTextarea = style({
-    width: '30em',
-    height: '10em',
-    border: '1px solid #ccc',
+    width: '24em',
+    height: '8em',
+    border: '.1em solid #ccc',
     borderRadius: '0.5em',
     padding: '1em',
 });
 
 export const StyledApplyButton = style({
-    border: '1px solid #ccc',
+    border: '.1em solid #ccc',
     borderRadius: '0.5em',
     padding: '1em',
 });
