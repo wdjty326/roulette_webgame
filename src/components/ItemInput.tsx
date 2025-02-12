@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
-import { v4 as uuidv4 } from 'uuid';
 import useRouletteStore from "../stores/store";
 import { StyledApplyButton, StyledItemInput, StyledTextarea } from "./ItemInput.css";
 
 
 const ItemInput = () => {
-    const [value, setValue] = useState<string>();
-    const itemList = useRouletteStore((state) => state.itemList);
+    const [value, setValue] = useState<string>(useRouletteStore.getState().getItemListString());
 
     useEffect(() => {
         const handleApply = () => {
-            // useRouletteStore.getState().setItemList([...itemList, { name: value, uuid: uuidv4() }]);
+            useRouletteStore.getState().setItemListString(value);
         };
         handleApply();
     }, [value]);
