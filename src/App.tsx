@@ -5,6 +5,8 @@ import MainScreen from './screens/MainScreen';
 import useRouletteStore from './stores/store';
 import { v4 } from 'uuid';
 import { ITEM_LABEL_PREFIX, WALL_LABEL_PREFIX } from './consts';
+import ItemInput from './components/ItemInput';
+import StartButton from './components/StartButton';
 
 
 function App() {
@@ -17,6 +19,7 @@ function App() {
   // 엔진 상태 관리를 위한 ref 추가
   const runnerRef = useRef<Matter.Runner | null>(null);
   const isRunningRef = useRef<boolean>(useRouletteStore.getState().isRunning);  // 실행 상태 추적용 ref 추가
+  const isMinimapRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!targetRef.current) return;
@@ -69,7 +72,7 @@ function App() {
 
     // 미니맵 스타일 설정
     minimapRender.canvas.style.position = 'fixed';
-    minimapRender.canvas.style.right = '20px';
+    minimapRender.canvas.style.left = '20px';
     minimapRender.canvas.style.top = '20px';
     minimapRender.canvas.style.border = '2px solid #333';
     minimapRender.canvas.style.borderRadius = '10px';
@@ -135,9 +138,9 @@ function App() {
 
       if (bodies.length > 0) {
         Composite.add(world, bodies);
-        Render.lookAt(render, bodies[0], {
+        Render.lookAt(render, bodies[bodies.length - 1], {
             x: window.innerWidth,
-            y: window.innerHeight / 2
+            y: window.innerHeight
           });
       }
       itemsRef.current = bodies;
@@ -177,26 +180,26 @@ function App() {
       return ground;
     });
 
-    // 회전하는 장애물 생성
-    const rotatingObstacle = Bodies.rectangle(-400, 5000, 800, 20, {
-      isStatic: true,
-      angle: 0,
-      render: {
-        fillStyle: '#00F2FF'
-      }
-    });
+    // // 회전하는 장애물 생성
+    // const rotatingObstacle = Bodies.rectangle(-400, 5000, 800, 20, {
+    //   isStatic: true,
+    //   angle: 0,
+    //   render: {
+    //     fillStyle: '#00F2FF'
+    //   }
+    // });
 
     // 회전 애니메이션
-    Matter.Events.on(engine, 'beforeUpdate', () => {
-      // 매 프레임마다 0.02 라디안씩 회전
-      Matter.Body.rotate(rotatingObstacle, 0.02);
-    });
+    // Matter.Events.on(engine, 'beforeUpdate', () => {
+    //   // 매 프레임마다 0.02 라디안씩 회전
+    //   Matter.Body.rotate(rotatingObstacle, 0.02);
+    // });
 
     // world에 추가 (기존 Composite.add 라인 수정)
     Composite.add(world, walls);
-    Composite.add(world, [
-      rotatingObstacle,
-    ]);
+    // Composite.add(world, [
+    //   rotatingObstacle,
+    // ]);
     renderItem(useRouletteStore.getState().itemList);
 
     // runner 생성 및 저장
@@ -208,8 +211,8 @@ function App() {
     runner.enabled = false;
     // Render.stop(render);
 
-    // 카메라 따라가기
-    Matter.Events.on(engine, 'afterUpdate', () => {
+    const moveCamera = () => {
+      if (isMinimapRef.current) return;
       if (itemsRef.current.length === 0) return;
       const target = itemsRef.current.reduce((prev, current) => {
         const index = Composite.allBodies(world).findIndex(body => body.label === current.label);
@@ -221,9 +224,12 @@ function App() {
       }, itemsRef.current[0]);
       Render.lookAt(render, target, {
         x: window.innerWidth,
-        y: window.innerHeight / 2
+        y: window.innerHeight
       });
-    });
+    }
+
+    // 카메라 따라가기
+    Matter.Events.on(engine, 'afterUpdate', moveCamera);
 
     // 예시: 특정 라벨의 물체 제거
     Matter.Events.on(engine, 'afterUpdate', () => {
@@ -234,6 +240,32 @@ function App() {
         }
       });
     });
+
+    const handleMinimapMouseMove = (e: MouseEvent) => {
+      isMinimapRef.current = true;
+      const rect = minimapRender.canvas.getBoundingClientRect();
+      const scaleX = ZIGZAG_VALLEY_CONFIG.width / minimapRender.canvas.width;
+      const scaleY = ZIGZAG_VALLEY_CONFIG.height / minimapRender.canvas.height;
+      
+      // 미니맵에서의 마우스 위치를 실제 게임 좌표로 변환
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      // 메인 뷰 이동
+      Render.lookAt(render, {
+        min: { x: x - window.innerWidth, y: y - window.innerHeight },
+        max: { x: x + window.innerWidth, y: y + window.innerHeight }
+      });
+    }
+
+    const handleMinimapMouseLeave = () => {
+      isMinimapRef.current = false;
+      moveCamera();
+    }
+
+    // 미니맵 마우스 이벤트 처리
+    minimapRender.canvas.addEventListener('mousemove', handleMinimapMouseMove);
+    minimapRender.canvas.addEventListener('mouseleave', handleMinimapMouseLeave);
 
     // cleanup
     return () => {
@@ -259,6 +291,9 @@ function App() {
       // 미니맵 렌더러 정리
       Render.stop(minimapRender);
       minimapRender.canvas.remove();
+
+      // 미니맵 마우스 이벤트 제거
+      // minimapRender.canvas.removeEventListener('mousemove');
     }
   }, [])
 
@@ -266,7 +301,9 @@ function App() {
   return (
     <>
       <div ref={targetRef}></div>
-      <MainScreen />
+      {/* <MainScreen /> */}
+      <ItemInput />
+      <StartButton />
     </>
   )
 }
