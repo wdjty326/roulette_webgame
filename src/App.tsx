@@ -11,7 +11,7 @@ function App() {
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
   const targetRef = useRef<HTMLDivElement | null>(null);
-  // const previousItemRef = useRef<string>('');
+  const previousItemRef = useRef<string>('');
   const itemsRef = useRef<Matter.Body[]>([]);
 
   // 엔진 상태 관리를 위한 ref 추가
@@ -53,20 +53,47 @@ function App() {
     // run te renderer
     Render.run(render);
 
+    // 미니맵 렌더러 생성
+    const minimapRender = Render.create({
+      element: targetRef.current,
+      engine: engine,
+      options: {
+        width: 200,                    // 미니맵 크기
+        height: 400,
+        wireframes: false,
+        background: '#1c1c1c',
+        pixelRatio: 1,
+        hasBounds: true
+      }
+    });
+
+    // 미니맵 스타일 설정
+    minimapRender.canvas.style.position = 'fixed';
+    minimapRender.canvas.style.right = '20px';
+    minimapRender.canvas.style.top = '20px';
+    minimapRender.canvas.style.border = '2px solid #333';
+    minimapRender.canvas.style.borderRadius = '10px';
+
+    // 두 렌더러 실행
+    Render.run(minimapRender);
+
+    // 미니맵 뷰 설정
+    Render.lookAt(minimapRender, {
+      min: { x: 0, y: 0 },
+      max: { x: ZIGZAG_VALLEY_CONFIG.width, y: ZIGZAG_VALLEY_CONFIG.height }
+    });
+
     const renderItem = (list: string[]) => {
       // debugger;
       // if (previousItemRef.current === list.join(',')) return;
       // previousItemRef.current = list.join(',');
-
+      console.log(previousItemRef.current, '???');
       let startX = ZIGZAG_VALLEY_CONFIG.width / 2;
       let startY = 200;
 
       // 없으면 제거
-      Matter.Composite.allBodies(world)
-        .filter(body => body.label?.startsWith(ITEM_LABEL_PREFIX))
-        .forEach(body => {
-          Composite.remove(world, body);
-        });
+      Composite.remove(world, Matter.Composite.allBodies(world)
+        .filter(body => body.label?.startsWith(ITEM_LABEL_PREFIX)));
 
       // 7가지 색상 정의
       const COLORS = [
@@ -109,11 +136,9 @@ function App() {
       if (bodies.length > 0) {
         Composite.add(world, bodies);
         Render.lookAt(render, bodies[0], {
-          // x: width / 2,
-          // y: height / 2
-          x: window.innerWidth,
-          y: window.innerHeight / 2
-        });
+            x: window.innerWidth,
+            y: window.innerHeight / 2
+          });
       }
       itemsRef.current = bodies;
     }
@@ -134,26 +159,6 @@ function App() {
       }
     });
 
-    // // create two boxes and a ground
-    // const boxA = Bodies.circle(1000, 200, 40, {
-    //   label: 'ball_1',  // 고유 라벨 추가
-    //   restitution: 0.8,
-    //   friction: 0.01,
-    //   density: 0.001,
-    //   render: {
-    //     fillStyle: '#F35e66'
-    //   }
-    // });
-
-    // const boxB = Bodies.circle(1250, 50, 40, {
-    //   label: 'ball_2',  // 고유 라벨 추가
-    //   restitution: 0.8,
-    //   friction: 0.01,
-    //   density: 0.001,
-    //   render: {
-    //     fillStyle: '#63C132'
-    //   }
-    // });
 
     const walls = ZIGZAG_VALLEY_CONFIG.walls.map(wall => {
       // TODO:: Bodies.fromVertices 로 바꿔야 함
@@ -170,38 +175,6 @@ function App() {
       });
       Matter.Body.setCentre(ground, { x: 0, y: 0 }, true);
       return ground;
-    });
-
-    // const floor = Bodies.rectangle(
-    //     width/2,      // x: 사각형의 중심점 x좌표
-    //     height - 30,  // y: 사각형의 중심점 y좌표
-    //     width,        // width: 사각형의 전체 너비
-    //     60,          // height: 사각형의 전체 높이
-    //     { 
-    //         isStatic: true 
-    //     }
-    // );
-
-
-    // const mouse = Mouse.create(render.canvas);
-    // const mouseConstraint = MouseConstraint.create(engine, {
-    //   mouse: mouse,
-    //   constraint: {
-    //     stiffness: 0.2,
-    //   }
-    // });
-
-    // 마우스 위치를 뷰포트에 맞게 조정
-    Matter.Events.on(engine, 'beforeUpdate', () => {
-      // const bounds = render.bounds;
-      // const offset = {
-      //   x: bounds.min.x,
-      //   y: bounds.min.y
-      // };
-
-      // 마우스 위치 업데이트
-      // mouse.absolute.x = mouse.position.x + offset.x;
-      // mouse.absolute.y = mouse.position.y + offset.y;
     });
 
     // 회전하는 장애물 생성
@@ -239,7 +212,8 @@ function App() {
     Matter.Events.on(engine, 'afterUpdate', () => {
       if (itemsRef.current.length === 0) return;
       const target = itemsRef.current.reduce((prev, current) => {
-        if (prev.position.y > current.position.y || !current.render.visible) {
+        const index = Composite.allBodies(world).findIndex(body => body.label === current.label);
+        if (prev.position.y > current.position.y || index === -1) {
           return prev;
         } else {
           return current;
@@ -281,6 +255,10 @@ function App() {
       // 참조 제거
       engineRef.current = null;
       renderRef.current = null;
+
+      // 미니맵 렌더러 정리
+      Render.stop(minimapRender);
+      minimapRender.canvas.remove();
     }
   }, [])
 
