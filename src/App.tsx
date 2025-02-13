@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import Matter from 'matter-js';
 import ZIGZAG_VALLEY_CONFIG from './maps/ZizzagValley';
-import MainScreen from './screens/MainScreen';
 import useRouletteStore from './stores/store';
 import { v4 } from 'uuid';
 import { ITEM_LABEL_PREFIX, WALL_LABEL_PREFIX } from './consts';
@@ -301,7 +300,6 @@ function App() {
   return (
     <>
       <div ref={targetRef}></div>
-      {/* <MainScreen /> */}
       <ItemInput />
       <StartButton />
     </>
