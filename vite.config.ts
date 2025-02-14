@@ -6,6 +6,7 @@ import {vanillaExtractPlugin} from '@vanilla-extract/vite-plugin'
 export default defineConfig({
   plugins: [reactSWC(), vanillaExtractPlugin()],
   build: {
+    target: 'es2015',
     rollupOptions: {
       output: {
         manualChunks(id) {
