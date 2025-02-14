@@ -62,6 +62,19 @@ const ZIGZAG_VALLEY_CONFIG = (() => {
     walls.push({ ...wellPosition7, angle: 0});
     walls.push({ ...wellPosition8, angle: 0});
 
+    const wellPosition9 = getWallPosition(wellPosition7.x, wellPosition7.y, wallWidth, wallHeight, -Math.PI * 0.11);
+    const wellPosition10 = getWallPosition(wellPosition8.x, wellPosition8.y, wallWidth, wallHeight, Math.PI  * 0.11);
+
+    walls.push({ ...wellPosition9});
+    walls.push({ ...wellPosition10});
+
+    
+    const wellPosition11 = getWallPosition(wellPosition9.x, wellPosition9.y, wallWidth, wallHeight, wellPosition9.angle);
+    const wellPosition12 = getWallPosition(wellPosition10.x, wellPosition10.y, wallWidth, wallHeight, wellPosition10.angle);
+
+    walls.push({ ...wellPosition11, angle: 0});
+    walls.push({ ...wellPosition12, angle: 0});
+
     
     return {
         name: 'zigzagValley',
