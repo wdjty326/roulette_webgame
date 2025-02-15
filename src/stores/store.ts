@@ -1,21 +1,14 @@
-// import { v4 } from "uuid";
 import { create } from "zustand";
-// import { ITEM_LABEL_PREFIX } from "../consts";
 
-interface RouletteStore {
-    isRunning: boolean;
+interface RouletteItemStore {
     itemList: string[];
-    
-    setIsRunning: (isRunning: boolean) => void;
     setItemList: (itemList: string[]) => void;
     getItemListString: () => string;
     setItemListString: (itemListString: string) => void;
 }
 
-const useRouletteStore = create<RouletteStore>((set, get) => ({
-    isRunning: false,
+export const useRouletteItemStore = create<RouletteItemStore>((set, get) => ({
     itemList: ['짱아', '짱아', '짱구', '짱구'],
-    setIsRunning: (isRunning) => set({ isRunning }),
     setItemList: (itemList) => set({ itemList }),
     getItemListString: () => {
         type FindItem = {
@@ -45,6 +38,16 @@ const useRouletteStore = create<RouletteStore>((set, get) => ({
         }, [] as string[]);
         set({ itemList });
     }
+}));
+
+interface RouletteStore {
+    isRunning: boolean;    
+    setIsRunning: (isRunning: boolean) => void;
+}
+
+const useRouletteStore = create<RouletteStore>((set) => ({
+    isRunning: false,
+    setIsRunning: (isRunning) => set({ isRunning }),
 }));
 
 export default useRouletteStore;

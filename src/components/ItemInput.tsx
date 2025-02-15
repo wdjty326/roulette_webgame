@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import useRouletteStore from "../stores/store";
+import { useRouletteItemStore } from "../stores/store";
 import { StyledApplyButton, StyledItemInput, StyledTextarea } from "./ItemInput.css";
 
 
 const ItemInput = () => {
-    const [value, setValue] = useState<string>(useRouletteStore.getState().getItemListString());
+    const [value, setValue] = useState<string>(useRouletteItemStore.getState().getItemListString());
 
     useEffect(() => {
         const handleApply = () => {
-            useRouletteStore.getState().setItemListString(value);
+            useRouletteItemStore.getState().setItemListString(value);
         };
         handleApply();
     }, [value]);

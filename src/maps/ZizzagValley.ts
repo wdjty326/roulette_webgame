@@ -1,6 +1,13 @@
 import { getWallPosition } from "../Util";
 
 
+interface RotatingObstacle {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
 /**  */
 const ZIGZAG_VALLEY_CONFIG = (() => {
     const width = 2880;
@@ -29,6 +36,8 @@ const ZIGZAG_VALLEY_CONFIG = (() => {
             angle: 0
         }
     ];
+
+    const rotatingObstacles: RotatingObstacle[] = [];
 
     const wellPosition1 = getWallPosition(leftX, wallY, wallWidth, wallHeight, Math.PI / 4);
     const wellPosition2 = getWallPosition(rightX, wallY, wallWidth, wallHeight, Math.PI / 4);
@@ -72,6 +81,13 @@ const ZIGZAG_VALLEY_CONFIG = (() => {
     const wellPosition11 = getWallPosition(wellPosition9.x, wellPosition9.y, wallWidth, wallHeight, wellPosition9.angle);
     const wellPosition12 = getWallPosition(wellPosition10.x, wellPosition10.y, wallWidth, wallHeight, wellPosition10.angle);
 
+    rotatingObstacles.push({
+        x: wellPosition10.x - (wellPosition10.x - wellPosition9.x) / 2,
+        y: wellPosition9.y + 800,
+        width: 800,
+        height: 64,
+    })
+
     walls.push({ ...wellPosition11, angle: 0});
     walls.push({ ...wellPosition12, angle: 0});
 
@@ -80,7 +96,8 @@ const ZIGZAG_VALLEY_CONFIG = (() => {
         name: 'zigzagValley',
         width,
         height,
-        walls
+        walls,
+        rotatingObstacles
     };
 })();
 

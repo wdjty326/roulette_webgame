@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 import Matter from 'matter-js';
 import ZIGZAG_VALLEY_CONFIG from './maps/ZizzagValley';
-import useRouletteStore from './stores/store';
+import useRouletteStore, { useRouletteItemStore } from './stores/store';
 import { v4 } from 'uuid';
-import { ITEM_LABEL_PREFIX, WALL_LABEL_PREFIX } from './consts';
+import { ITEM_LABEL_PREFIX, ROTATING_OBSTACLE_LABEL_PREFIX, WALL_LABEL_PREFIX } from './consts';
 import ItemInput from './components/ItemInput';
 import StartButton from './components/StartButton';
 
@@ -12,7 +12,6 @@ function App() {
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
   const targetRef = useRef<HTMLDivElement | null>(null);
-  const previousItemRef = useRef<string>('');
   const itemsRef = useRef<Matter.Body[]>([]);
 
   // 엔진 상태 관리를 위한 ref 추가
@@ -34,7 +33,7 @@ function App() {
     const engine = Engine.create({
       gravity: {
         x: 0,
-        y: 1
+        y: 1,
       }
     });
     engineRef.current = engine;
@@ -86,18 +85,13 @@ function App() {
     });
 
     const renderItem = (list: string[]) => {
-      // debugger;
-      // if (previousItemRef.current === list.join(',')) return;
-      // previousItemRef.current = list.join(',');
-      console.log(previousItemRef.current, '???');
       let startX = ZIGZAG_VALLEY_CONFIG.width / 2;
       let startY = 200;
 
       // 없으면 제거
       Composite.remove(world, Matter.Composite.allBodies(world)
         .filter(body => body.label?.startsWith(ITEM_LABEL_PREFIX)));
-
-      // 7가지 색상 정의
+      // 20가지 색상 정의
       const COLORS = [
         '#FF6B6B',  // 빨강
         '#4ECDC4',  // 청록
@@ -105,9 +99,21 @@ function App() {
         '#96CEB4',  // 민트
         '#FFEEAD',  // 노랑
         '#D4A5A5',  // 분홍
-        '#9B59B6'   // 보라
+        '#9B59B6',  // 보라
+        '#2ECC71',  // 초록
+        '#E74C3C',  // 진한 빨강
+        '#3498DB',  // 파랑
+        '#F1C40F',  // 골드
+        '#1ABC9C',  // 터콰이즈
+        '#E67E22',  // 주황
+        '#8E44AD',  // 진한 보라
+        '#16A085',  // 다크 터콰이즈
+        '#D35400',  // 진한 주황
+        '#27AE60',  // 다크 그린
+        '#2980B9',  // 진한 파랑
+        '#F39C12',  // 밝은 주황
+        '#C0392B'   // 버건디
       ];
-
       // 랜덤 색상 선택 함수
       const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
@@ -119,6 +125,11 @@ function App() {
           restitution: 0.8,
           friction: 0.01,
           density: 0.001,
+          velocity: {
+            x: 0,
+            y: 0,
+          },
+          frictionAir: 0.01,
           render: {
             fillStyle: color,
             sprite: {
@@ -138,25 +149,34 @@ function App() {
       if (bodies.length > 0) {
         Composite.add(world, bodies);
         Render.lookAt(render, bodies[bodies.length - 1], {
-            x: window.innerWidth,
-            y: window.innerHeight
-          });
+          x: window.innerWidth,
+          y: window.innerHeight
+        });
       }
       itemsRef.current = bodies;
     }
 
-    useRouletteStore.subscribe((state) => {
+    useRouletteItemStore.subscribe((state) => {
       renderItem(state.itemList);
+    });
 
+    useRouletteStore.subscribe((state) => {
       const runner = runnerRef.current;
       if (!runner) return;
 
       if (isRunningRef.current !== state.isRunning) {
         isRunningRef.current = state.isRunning;
         if (isRunningRef.current) {
-          runner.enabled = true;
+          itemsRef.current.forEach(body => {
+            Matter.Body.setStatic(body, true);
+            Matter.Body.setVelocity(body, { x: 0, y: 0 });  // 초기 아래 방향 속도
+          });
         } else {
-          runner.enabled = false;
+          itemsRef.current.forEach(body => {
+            Matter.Body.setStatic(body, false);
+            Matter.Body.setVelocity(body, { x: 0, y: 1 });  // 초기 아래 방향 속도
+          });
+          Engine.update(engine, 16.666);
         }
       }
     });
@@ -179,6 +199,19 @@ function App() {
       return ground;
     });
 
+    const rotatingObstacles = ZIGZAG_VALLEY_CONFIG.rotatingObstacles.map(obstacle => {
+      const body = Bodies.rectangle(obstacle.x, obstacle.y, obstacle.width, obstacle.height, {
+        label: ROTATING_OBSTACLE_LABEL_PREFIX + v4(),
+        isStatic: true,
+        angle: 0,
+        render: {
+          fillStyle: '#00F2FF'
+        }
+      });
+
+      return body;
+    });
+
     // // 회전하는 장애물 생성
     // const rotatingObstacle = Bodies.rectangle(-400, 5000, 800, 20, {
     //   isStatic: true,
@@ -189,17 +222,17 @@ function App() {
     // });
 
     // 회전 애니메이션
-    // Matter.Events.on(engine, 'beforeUpdate', () => {
-    //   // 매 프레임마다 0.02 라디안씩 회전
-    //   Matter.Body.rotate(rotatingObstacle, 0.02);
-    // });
+    Matter.Events.on(engine, 'beforeUpdate', () => {
+      // 매 프레임마다 0.02 라디안씩 회전
+      rotatingObstacles.forEach(obstacle => {
+        Matter.Body.rotate(obstacle, 0.02);
+      });
+    });
 
     // world에 추가 (기존 Composite.add 라인 수정)
     Composite.add(world, walls);
-    // Composite.add(world, [
-    //   rotatingObstacle,
-    // ]);
-    renderItem(useRouletteStore.getState().itemList);
+    Composite.add(world, rotatingObstacles);
+    renderItem(useRouletteItemStore.getState().itemList);
 
     // runner 생성 및 저장
     const runner = Runner.create();
@@ -207,7 +240,6 @@ function App() {
 
     // run the engine
     Runner.run(runner, engine);
-    runner.enabled = false;
     // Render.stop(render);
 
     const moveCamera = () => {
@@ -215,10 +247,10 @@ function App() {
       if (itemsRef.current.length === 0) return;
       const target = itemsRef.current.reduce((prev, current) => {
         const index = Composite.allBodies(world).findIndex(body => body.label === current.label);
-        if (prev.position.y > current.position.y || index === -1) {
-          return prev;
-        } else {
+        if ((current.position.y > prev.position.y) && index !== -1) {
           return current;
+        } else {
+          return prev;
         }
       }, itemsRef.current[0]);
       Render.lookAt(render, target, {
@@ -245,7 +277,7 @@ function App() {
       const rect = minimapRender.canvas.getBoundingClientRect();
       const scaleX = ZIGZAG_VALLEY_CONFIG.width / minimapRender.canvas.width;
       const scaleY = ZIGZAG_VALLEY_CONFIG.height / minimapRender.canvas.height;
-      
+
       // 미니맵에서의 마우스 위치를 실제 게임 좌표로 변환
       const x = (e.clientX - rect.left) * scaleX;
       const y = (e.clientY - rect.top) * scaleY;
