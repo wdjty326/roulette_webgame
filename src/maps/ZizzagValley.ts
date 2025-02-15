@@ -68,6 +68,34 @@ const ZIGZAG_VALLEY_CONFIG = (() => {
     const wellPosition7 = getWallPosition(wellPosition5.x, wellPosition5.y, wallWidth, wallHeight, wellPosition5.angle);
     const wellPosition8 = getWallPosition(wellPosition6.x, wellPosition6.y, wallWidth, wallHeight, wellPosition6.angle);
 
+    rotatingObstacles.push({
+        x: wellPosition7.x,
+        y: wellPosition7.y + wellPosition7.height / 2,
+        width: 800,
+        height: 64,
+    })
+    
+    rotatingObstacles.push({
+        x: wellPosition8.x,
+        y: wellPosition8.y + wellPosition8.height / 2,
+        width: 800,
+        height: 64,
+    })
+    
+    rotatingObstacles.push({
+        x: wellPosition7.x + wellPosition8.x / 2,
+        y: wellPosition8.y + wellPosition8.height / 2,
+        width: 800,
+        height: 64,
+    })
+    
+    rotatingObstacles.push({
+        x: wellPosition8.x - wellPosition8.x / 2,
+        y: wellPosition8.y + wellPosition8.height / 2,
+        width: 800,
+        height: 64,
+    })
+    
     walls.push({ ...wellPosition7, angle: 0});
     walls.push({ ...wellPosition8, angle: 0});
 
@@ -77,13 +105,12 @@ const ZIGZAG_VALLEY_CONFIG = (() => {
     walls.push({ ...wellPosition9});
     walls.push({ ...wellPosition10});
 
-    
     const wellPosition11 = getWallPosition(wellPosition9.x, wellPosition9.y, wallWidth, wallHeight, wellPosition9.angle);
     const wellPosition12 = getWallPosition(wellPosition10.x, wellPosition10.y, wallWidth, wallHeight, wellPosition10.angle);
 
     rotatingObstacles.push({
         x: wellPosition10.x - (wellPosition10.x - wellPosition9.x) / 2,
-        y: wellPosition9.y + 800,
+        y: wellPosition9.y + wellPosition9.height / 2,
         width: 800,
         height: 64,
     })
