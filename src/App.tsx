@@ -16,7 +16,6 @@ function App() {
 
   // 엔진 상태 관리를 위한 ref 추가
   const runnerRef = useRef<Matter.Runner | null>(null);
-  const isRunningRef = useRef<boolean>(useRouletteStore.getState().isRunning);  // 실행 상태 추적용 ref 추가
   const isMinimapRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -33,7 +32,7 @@ function App() {
     const engine = Engine.create({
       gravity: {
         x: 0,
-        y: 1,
+        y: 0,
       }
     });
     engineRef.current = engine;
@@ -164,20 +163,12 @@ function App() {
       const runner = runnerRef.current;
       if (!runner) return;
 
-      if (isRunningRef.current !== state.isRunning) {
-        isRunningRef.current = state.isRunning;
-        if (isRunningRef.current) {
-          itemsRef.current.forEach(body => {
-            Matter.Body.setStatic(body, true);
-            Matter.Body.setVelocity(body, { x: 0, y: 0 });  // 초기 아래 방향 속도
-          });
-        } else {
-          itemsRef.current.forEach(body => {
-            Matter.Body.setStatic(body, false);
-            Matter.Body.setVelocity(body, { x: 0, y: 1 });  // 초기 아래 방향 속도
-          });
-          Engine.update(engine, 16.666);
-        }
+      if (state.isRunning) {
+        engine.gravity.y = 1;
+        runner.enabled = true;
+      } else {
+        engine.gravity.y = 0;
+        runner.enabled = false;
       }
     });
 
@@ -212,15 +203,6 @@ function App() {
       return body;
     });
 
-    // // 회전하는 장애물 생성
-    // const rotatingObstacle = Bodies.rectangle(-400, 5000, 800, 20, {
-    //   isStatic: true,
-    //   angle: 0,
-    //   render: {
-    //     fillStyle: '#00F2FF'
-    //   }
-    // });
-
     // 회전 애니메이션
     Matter.Events.on(engine, 'beforeUpdate', () => {
       // 매 프레임마다 0.02 라디안씩 회전
@@ -245,14 +227,19 @@ function App() {
     const moveCamera = () => {
       if (isMinimapRef.current) return;
       if (itemsRef.current.length === 0) return;
-      const target = itemsRef.current.reduce((prev, current) => {
-        const index = Composite.allBodies(world).findIndex(body => body.label === current.label);
-        if ((current.position.y > prev.position.y) && index !== -1) {
-          return current;
-        } else {
-          return prev;
-        }
-      }, itemsRef.current[0]);
+
+      // 현재 world에 존재하는 공들만 필터링
+      const existingBodies = itemsRef.current.filter(item => 
+        Composite.allBodies(world).some(body => body.label === item.label)
+      );
+
+      if (existingBodies.length === 0) return;
+
+      // 존재하는 공들 중 가장 아래에 있는 공 찾기
+      const target = existingBodies.reduce((lowest, current) => 
+        current.position.y > lowest.position.y ? current : lowest
+      , existingBodies[0]);
+
       Render.lookAt(render, target, {
         x: window.innerWidth,
         y: window.innerHeight
